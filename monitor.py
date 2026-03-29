@@ -15,9 +15,14 @@ from bs4 import BeautifulSoup
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from dotenv import load_dotenv
+from datetime import datetime
+import pytz
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Set timezone to CST
+CST = pytz.timezone('America/Chicago')
 
 # ─────────────────────────────────────────
 # CONFIGURATION (set in .env or GitHub Secrets)
@@ -104,7 +109,7 @@ def send_alert(source: str, text: str, url: str = ""):
         "Telegram":  "📣",
     }
     emoji = emoji_map.get(source, "🔔")
-    now   = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M UTC")
+    now   = datetime.now(CST).strftime("%Y-%m-%d %H:%M CST")
 
     msg = (
         f"{emoji} <b>H1B Slot Alert — {source}</b>\n"
