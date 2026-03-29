@@ -18,11 +18,14 @@ from telethon.sessions import StringSession
 # ─────────────────────────────────────────
 # CONFIGURATION (set in .env or GitHub Secrets)
 # ─────────────────────────────────────────
+# Bot account (for sending alerts)
 TELEGRAM_BOT_TOKEN   = os.getenv("TELEGRAM_BOT_TOKEN")    # From @BotFather
 TELEGRAM_CHAT_ID     = os.getenv("TELEGRAM_CHAT_ID")      # Your personal chat ID
+
+# User account (for scraping Telegram channels)
 TELEGRAM_API_ID      = os.getenv("TELEGRAM_API_ID")       # From my.telegram.org
 TELEGRAM_API_HASH    = os.getenv("TELEGRAM_API_HASH")     # From my.telegram.org
-TELEGRAM_SESSION_STR = os.getenv("TELEGRAM_SESSION_STR")  # Generated once via gen_session.py
+TELEGRAM_USER_SESSION_STR = os.getenv("TELEGRAM_USER_SESSION_STR")  # Generated via gen_session.py with personal account
 
 # H1B-specific keywords — any match triggers alert
 VISA_KEYWORDS = [
@@ -233,15 +236,19 @@ def scrape_visaslots(seen: set) -> int:
 # ─────────────────────────────────────────
 
 async def scrape_telegram_channels(seen: set) -> int:
-    """Read the last 20 messages from each free H1B Telegram channel."""
-    if not all([TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_SESSION_STR]):
-        log.warning("  [Telegram] Skipping — credentials not set. See README.")
+    """Read the last 20 messages from each free H1B Telegram channel.
+    
+    Requires a USER account session (not a bot account).
+    To generate: Run gen_session.py with your personal Telegram account.
+    """
+    if not all([TELEGRAM_API_ID, TELEGRAM_API_HASH, TELEGRAM_USER_SESSION_STR]):
+        log.warning("  [Telegram] Skipping — user session not set. Run gen_session.py with personal account.")
         return 0
 
     total_alerts = 0
     try:
         client = TelegramClient(
-            StringSession(TELEGRAM_SESSION_STR),
+            StringSession(TELEGRAM_USER_SESSION_STR),
             int(TELEGRAM_API_ID),
             TELEGRAM_API_HASH,
         )
