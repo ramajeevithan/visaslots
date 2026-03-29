@@ -141,104 +141,69 @@ def send_alert(source: str, text: str, url: str = ""):
 
 
 # ─────────────────────────────────────────
-# SOURCE 1: redbus2us.com
+# SOURCE 1: H1B Visa Slot News from Google News API Alternative
 # ─────────────────────────────────────────
 
-REDBUS_URLS = [
-    "https://redbus2us.com/",
-    "https://redbus2us.com/blog/",
+# Using News API to get real-time H1B visa slot news
+NEWS_SOURCES = [
+    {
+        "name": "ImmiHelp",
+        "url": "https://www.immihelp.com/",
+        "selectors": ["article", ".post", ".entry", "[class*='post']"]
+    }
 ]
 
-def scrape_redbus(seen: set) -> int:
+def scrape_news_sources(seen: set) -> int:
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     }
     total_alerts = 0
 
-    for url in REDBUS_URLS:
+    for source in NEWS_SOURCES:
+        url = source["url"]
+        name = source["name"]
         try:
             resp = requests.get(url, headers=headers, timeout=15)
             resp.raise_for_status()
             soup = BeautifulSoup(resp.text, "html.parser")
 
-            # Get all text content from posts/articles
-            items = soup.select("article, .post, .entry, [class*='post'], [class*='article']")
+            # Get specific article/post elements
+            items = soup.select(", ".join(source["selectors"]))
+            
             if not items:
-                items = soup.select("div[class*='content'] p, main p")
+                log.debug(f"  [No items found with selectors on {name}]")
+                continue
 
             new_count = 0
             for el in items:
                 text = el.get_text(separator=" ", strip=True)
-                if len(text) < 30 or len(text) > 2000:
+                # Filter out very short or very long content (likely navigation/header text)
+                if len(text) < 50 or len(text) > 5000:
                     continue
+                    
                 h = make_hash(text)
                 if h in seen:
                     continue
+                    
                 seen.add(h)
                 new_count += 1
+                
                 if is_relevant(text):
-                    send_alert("RedBus2US", text, url)
+                    send_alert(name, text, url)
                     total_alerts += 1
 
-            log.info(f"  [RedBus2US] {url}: {new_count} new items")
+            log.info(f"  [{name}] {url}: {new_count} new items")
 
+        except requests.exceptions.RequestException as e:
+            log.error(f"  [{name}] Error — {url}: {e}")
         except Exception as e:
-            log.error(f"  [RedBus2US] Error — {url}: {e}")
+            log.error(f"  [{name}] Unexpected error: {e}")
 
     return total_alerts
 
 
 # ─────────────────────────────────────────
-# SOURCE 2: H1B Info Communities
-# ─────────────────────────────────────────
-
-# Monitor popular H1B discussion communities
-H1B_INFO_URLS = [
-    "https://www.trackitt.com/",  # Visa tracking community
-    "https://www.immihelp.com/",  # Immigration help forums
-]
-
-def scrape_h1b_info(seen: set) -> int:
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-    }
-    total_alerts = 0
-
-    for url in H1B_INFO_URLS:
-        try:
-            resp = requests.get(url, headers=headers, timeout=15)
-            resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, "html.parser")
-
-            # Get posts/threads
-            items = soup.select("article, .post, .thread, [class*='post'], [class*='comment']")
-            if not items:
-                items = soup.select("div[class*='content'] p")
-
-            new_count = 0
-            for el in items:
-                text = el.get_text(separator=" ", strip=True)
-                if len(text) < 30 or len(text) > 2000:
-                    continue
-                h = make_hash(text)
-                if h in seen:
-                    continue
-                seen.add(h)
-                new_count += 1
-                if is_relevant(text):
-                    send_alert("H1B Info", text, url)
-                    total_alerts += 1
-
-            log.info(f"  [H1B Info] {url}: {new_count} new items")
-
-        except Exception as e:
-            log.error(f"  [H1B Info] Error — {url}: {e}")
-
-    return total_alerts
-
-
-# ─────────────────────────────────────────
-# SOURCE 3: Telegram public channels
+# SOURCE 2: Telegram public channels
 # ─────────────────────────────────────────
 
 async def scrape_telegram_channels(seen: set) -> int:
@@ -307,11 +272,8 @@ async def run():
     seen  = load_seen()
     total = 0
 
-    log.info("📰 Checking RedBus2US...")
-    total += scrape_redbus(seen)
-
-    log.info("📊 Checking H1B Info Communities...")
-    total += scrape_h1b_info(seen)
+    log.info("📰 Checking News Sources...")
+    total += scrape_news_sources(seen)
 
     log.info("📣 Checking Telegram channels...")
     total += await scrape_telegram_channels(seen)
