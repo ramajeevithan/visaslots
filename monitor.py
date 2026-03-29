@@ -131,8 +131,8 @@ def send_alert(source: str, text: str, url: str = ""):
 # ─────────────────────────────────────────
 
 REDBUS_URLS = [
-    "https://redbus2us.com/h1b-visa-stamp-india-appointment-slot-available/",
-    "https://redbus2us.com/us-visa-stamping-india-news-updates/",
+    "https://redbus2us.com/h1b-visa-slot-news/",
+    "https://redbus2us.com/category/h1b-visa-news/",
     "https://redbus2us.com/us-visa-appointment-india/",
 ]
 
