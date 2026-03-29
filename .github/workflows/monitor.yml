@@ -16,6 +16,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Download previous state file
+        uses: actions/download-artifact@v4
+        with:
+          name: seen-items-state
+          path: .
+        continue-on-error: true
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
