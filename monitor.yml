@@ -1,0 +1,51 @@
+name: H1B Visa Slot Monitor
+
+on:
+  schedule:
+    # Runs every 20 minutes — adjust as needed
+    # Note: GitHub Actions minimum is every 5 mins, but 15-20 is safer
+    - cron: "*/20 * * * *"
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Cache seen_items.json between runs using GitHub cache
+      - name: Restore seen items cache
+        uses: actions/cache@v4
+        with:
+          path: seen_items.json
+          key: seen-items-${{ github.run_id }}
+          restore-keys: |
+            seen-items-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run monitor
+        env:
+          TELEGRAM_BOT_TOKEN:   ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:     ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_API_ID:      ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH:    ${{ secrets.TELEGRAM_API_HASH }}
+          TELEGRAM_SESSION_STR: ${{ secrets.TELEGRAM_SESSION_STR }}
+        run: python monitor.py
+
+      - name: Save seen items cache
+        if: always()
+        uses: actions/cache@v4
+        with:
+          path: seen_items.json
+          key: seen-items-${{ github.run_id }}
