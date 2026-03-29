@@ -14,6 +14,10 @@ import requests
 from bs4 import BeautifulSoup
 from telethon import TelegramClient
 from telethon.sessions import StringSession
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # ─────────────────────────────────────────
 # CONFIGURATION (set in .env or GitHub Secrets)
@@ -125,6 +129,8 @@ def send_alert(source: str, text: str, url: str = ""):
         }, timeout=10)
         r.raise_for_status()
         log.info(f"  ✅ Alert sent [{source}]")
+    except requests.exceptions.HTTPError as e:
+        log.error(f"  ❌ Alert failed [{source}]: {e.response.status_code} - {e.response.text}")
     except Exception as e:
         log.error(f"  ❌ Alert failed [{source}]: {e}")
 
